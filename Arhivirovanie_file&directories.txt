@@ -9,3 +9,6 @@ tar tf myBZIP2.bz2    - посмотреть что внутри архива
 
 zip –r myZIP.zip Folder1   - Запаковать Folder1 в ZIP
 unzip myZIP.zip                - Распаковать файл myZIP.zip
+
+
+fgghg
