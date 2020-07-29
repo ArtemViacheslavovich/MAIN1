@@ -1,0 +1,112 @@
+- https://docs.geoserver.org/stable/en/user/data/raster/gdal.html
+качаем gdal плагин для соответствующей версии геосервера и закидываем в /opt/tomcat/webapps/geoserver/WEB-INF/lib
+
+- Качаем драйвер ECW
+http://dl.maptools.org/dl/fgs/releases/pre-1.0/fgs-dev/fgs-cache/libecwj2-3.3.20060906.tar.gz
+- Качаем gdal, я брал последнюю версию — https://download.osgeo.org/gdal/2.4.4/gdal-2.4.4.tar.gz
+https://gdal.org/download.html
+
+- Прежде чем приступать к компиляции ECW необходимо установить следующие компоненты:
+# yum install gcc-c++
+# yum install patch
+
+Смотрите: https://trac.osgeo.org/gdal/wiki/ECW
+Места загрузки:
+- ftp://ftp.ii.net/pub/gentoo/distfiles/libecwj2-3.3-2006-09-06.zip
+
+# unzip libecwj2-3.3-2006-09-06.zip
+
+#Загрузите накопительный патч из вики GDAL: https://trac.osgeo.org/gdal/wiki/ECW
+
+#(Ищите ссылку для загрузки почтового файла вложения внизу страницы)
+#Примените патч (установите -p [n] при необходимости)
+# patch -b -p1 < path/to/libecwj2-3.3.patch
+
+Папка включения должна предварительно существовать в целевой папке (например, /usr/local/libecwj2-3.3)
+# mkdir -p /usr/local/libecwj2-3.3/include
+
+
+Соберите библиотеку и установите в указанную папку (например, /usr/local/libecwj2-3.3)
+# cd /path/to/libecwj2-3.3
+# ./configure --prefix=/usr/local/libecwj2-3.3
+# make
+# make install
+
+Прежде чем начать компилить GDAL нужно скомпилить PROJ, без него GDAL не соберется!
+
+Сборка из исходного кода PROJ
+
+Скачиваем с официального сайта https://proj.org/download.html желательно последнюю версию PROJ,я ставил proj 6.0.0 более новые версии не получилось поставить,
+GDAL требовал именно proj 6 версии.
+Требования к сборке:
+- Компилятор C99
+- Компилятор C ++ 11
+- SQLite3> = 3.11 (заголовки, библиотека и исполняемый файл) Собирал из исходников последнюю версию. и устанавливал переменные в файл /root/.bashrc(export PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin:$PATH
+export SQLITE3_LIBS=/usr/local/lib)
+# CFLAGS="-DSQLITE_ENABLE_COLUMN_METADATA=1" ./configure
+# make
+# make install
+- libtiff> = 4.0 (заголовки и библиотека) уже была установлена нужная версия, устанавливал переменную в файле /root/.bashrc (export TIFF_LIBS=/usr/lib64)
+- необязательно (но рекомендуется): curl> = 7.29.0 (Curl был установлен но он его почему то не увидел и я его скипнул --without-curl)
+- еще ставил дополнительно
+
+# yum install sqlite-devel
+
+если все требования выполнены переходим в каталог с исходниками PROJ и запускаем следующие команды:
+# ./configure --without-curl
+# make
+# make install
+Проверить установку можно выполнив:
+# proj
+Rel. 6.0.0, March 1st, 2019
+usage: proj [ -bdeEfiIlmorsStTvVwW [args] ] [ +opts[=arg] ] [ files ]
+
+Дополнительно ставил:
+
+#yum groupinstall "Development Tools"
+Может потребоваться (yum install SFCGAL-devel) так что лучше сразу установить, для этого нужно подключить репозитрии постгреса командой
+
+# yum -y install https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpmyum 
+# install SFCGAL-devel
+- Заходим в папку исходников gdal, компилим gdal с указанием драйвера и java
+https://gist.github.com/emxsys/da6fbb84225d71f3c88aef70768cc1b5
+# ./configure --with-ecw=/usr/local/libecwj2-3.3 --with-java=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.121-0.b13.res7c.x86_64 --with-jvm-lib=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.121-0.b13.res7c.x86_64/jre/lib/amd64/server --with-jvm-lib-add-rpath=yes
+# make
+# make install
+gdal скомпилился в usr/local
+
+- прописываем в etc/environment:
+LD_LIBRARY_PATH=/usr/local/lib
+GDAL_DATA=/usr/local/share/gdal
+
+Затем нужно установить "ant" для этого нужно зайти на сайт http://ant.apache.org/bindownload.cgi и скачать его
+apache-ant-1.10.8-bin.zip распаковать и поместить всю папку apache-ant-1.10.8 в /usr/local/
+# mv apache-ant-1.10.8 /usr/local/
+Для того чтобы можно было запускать ant не только из директории /usr/local/apache-ant-1.10.8/bin
+необходимо установить переменную $ANT_HOME и добавить ее в PATH.
+Для этого в домашней директории откроем файл .bashrc.
+И добавим следующие строки:
+export ANT_HOME=/usr/local/apache-ant-1.10.8
+export PATH=${PATH}:${ANT_HOME}/bin
+И выполнить команду:
+# source ./.bashrc
+Теперь можно проверить версию ant
+# ant -version
+Apache Ant(TM) version 1.10.8 compiled on May 10 2020
+
+- Компилим в папке с исходниками gdal https://trac.osgeo.org/gdal/wiki/GdalOgrInJavaBuildInstructionsUnix
+# cd /gdal/swig/java
+
+# nano java.opt изменить в данном файле JAVA_HOME указать ваш путь к домашней директории java ---> /usr/lib/jvm/jdk1.7.0
+Затем собираем сборку
+# make
+# make install
+- If you are using a version of GDAL that does not match the one expected by GeoServer, you can go and replace the gdal-2.2.0.jar file with the equivalent java binding jar (typically named either gdal-<version>.jar or imageio-ext-gdal-bindings-*.jar) included with your GDAL version. If your GDAL version does not include a bindings jar, it was probably not compiled with the java bindings and will not work with GeoServer.
+
+- Cоздаем в /opt/tomcat/bin файл setenv.sh (если нет) и прописываем туда:
+export JAVA_OPTS="-Djava.library.path=/usr/local/lib"
+это путь до библиотеки libgdalalljni.so
+
+единственный момент заметил - если рестартуешь геосервер из консоли томката, то все гдаловские фишки пропадают
+нужно рестартовать сам томкат systemctl restart tomcat
+- рестартуем сервер
