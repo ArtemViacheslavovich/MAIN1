@@ -1,0 +1,14 @@
+<VirtualHost *:80>
+    ServerName localhost:80
+    Redirect permanent / https://cod.krasnadzor.ru/
+</VirtualHost>
+
+<VirtualHost cod.krasnadzor.ru:443>
+SSLEngine On
+SSLCertificateFile "conf/ssl.crt/server.crt"
+SSLCertificateKeyFile "conf/ssl.key/server.key"
+DocumentRoot "C:/xampp/htdocs"
+ServerName cod.krasnadzor.ru
+ErrorLog "C:/xampp64/apache/logs/ssl_error.log"
+CustomLog "C:/xampp64/apache/logs/ssl_access.log" common
+</VirtualHost>
